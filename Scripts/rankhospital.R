@@ -8,45 +8,38 @@ rankhospital <- function(state, outcome, num) {
         outcome <- paste("Hospital.30.Day.Death..Mortality..Rates.from.", cap_outcome, sep = "")
         state <- toupper(state)  ## convert state argument to uppercase
         
-        ## Names of valid outcomes (outcomes in the dataset)
-        outcome_names <- names(outcome_data)[c(11, 17, 23)]
-        ## Get states from the dataset
-        uu_states <- unique(outcome_data$State)
-        
         ## Check that state and outcome are valid
-        if (!(outcome %in% outcome_names)) 
+        if (!(outcome %in% names(outcome_data)[c(11, 17, 23)])) 
                 stop("Invalid outcome")
-        else if (!(state %in% uu_states))
+        else if (!(state %in% unique(outcome_data$State)))
                 stop("Invalid state")
         
-        ## dataset with a specific outcome from a specific state
+        ## Dataset with a specific outcome from a specific state
         outcome_state <- outcome_data[outcome_data$State == state, c("Hospital.Name", outcome)]
         
-        ## coercing outcome to numeric
-        outcome_state[, 2] <- as.numeric(outcome_state[, 2]) 
-        
-        ## Sorting by rate and hospital (ascending and nulls last by default)
-        top <- 1:nrow(outcome_state)
-        rank_data <- outcome_state[order(outcome_state[[2]], outcome_state[[1]]), ]
-        top_data <-cbind(rank_data, top)
+        ## Coercing outcome to numeric
+        outcome_state[, 2] <- suppressWarnings(as.numeric(outcome_state[, 2]))
         
         ## Get complete cases
-        rank_data_cc <- top_data[complete.cases(top_data), ]
+        out_state_cc <- outcome_state[complete.cases(outcome_state), ]
         
-        ## num argument values
+        ## Sorting by rate and hospital (asc) and adding 'top' column
+        tidy_data <- out_state_cc[order(out_state_cc[[2]], out_state_cc[[1]]), ]
+        top_data <-cbind(tidy_data, top = 1:nrow(tidy_data))
+        
+        ## Setting value of 'num' argument 
         nrank <- if (tolower(num) == "best") {
                         1
                 } else if (tolower(num) == "worst") {
-                        nrow(rank_data_cc)
+                        nrow(top_data)
                 } else {
                         num
                 }
         
-        ## If top does not exists, return NULL
-        if (nrank > nrow(rank_data_cc))
-                return(NULL)
+        ## return NULL if top doesn't exists
+        if (nrank > nrow(top_data)) return(NA)
         
         ## otherwise return hospital in that rank
-        rank_data_cc[rank_data_cc$top == nrank, "Hospital.Name"]
+        top_data[top_data$top == nrank, "Hospital.Name"]
 }
 
