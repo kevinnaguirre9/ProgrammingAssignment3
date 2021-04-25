@@ -1,18 +1,19 @@
 rankall <- function(outcome, num = "best") {
         all_data <- read.csv("../Data/outcome-of-care-measures.csv")
         
-        out_format <- gsub(" ", ".", tools::toTitleCase(tolower(outcome)))
-        outcome <- paste("Hospital.30.Day.Death..Mortality..Rates.from.", out_format, sep = "")
+        tc_outcome <- tools::toTitleCase(tolower(outcome))
         
-        if (!(outcome %in% names(all_data)[c(11, 17, 23)])) {
-                stop("Invalid outcome")
+        if (!(tc_outcome %in% c("Heart Attack", "Heart Failure", "Pneumonia"))) {
+                stop("Invalid outcome: ")
         }
         
-        ## Coerce outcome rate to numeric 
-        all_data[, outcome] <- as.numeric(all_data[, outcome])
+        outcome <- switch (tc_outcome, "Heart Attack" = 11, "Heart Failure" = 17, "Pneumonia" = 23)
         
-        ## Split by state
-        out_state <- split(all_data[, c("Hospital.Name", "State", outcome)], all_data$State)
+        ## Coerce outcome rate to numeric 
+        all_data[, outcome] <- suppressWarnings(as.numeric(all_data[, outcome]))
+        
+        ## Split by state and 
+        out_state <- split(all_data[, c(2, 7, outcome)], all_data$State)
         
         ## Order by outcome and state
         sort_df <- lapply(out_state, function(x) x[order(x[[3]], x[[1]]), ])
@@ -26,17 +27,11 @@ rankall <- function(outcome, num = "best") {
         ## Create empty list
         hospitals_list <- vector(mode = "list")
         
-        ## Getting the hospital in a specific top from a specific state 
+        ##  For each state, find the hospital of the given rank
         for (i in seq_along(top_df)) {
                 each_df <- top_df[[i]]
                 
-                rnum <- if(tolower(num) == "best") {
-                        1
-                } else if (tolower(num) == "worst"){
-                        nrow(each_df)
-                } else {
-                        num
-                }
+                rnum <- switch(tolower(as.character(num)), "best" = 1, "worst" = nrow(each_df), num)
                 
                 if (rnum > nrow(each_df))  
                         hospitals_list[[i]] <- data.frame(Hospital.Name = NA, State = unique(each_df$State))
@@ -44,16 +39,14 @@ rankall <- function(outcome, num = "best") {
                         hospitals_list[[i]] <- each_df[each_df$Top == rnum, 1:2]
         }
         
-        ## Cobine all dataframes in the hospitals list
+        ## Combine all dataframes in the hospitals list into one
         hospitals_df <- do.call(rbind, hospitals_list)
         
         ## Change column and rows names
         colnames(hospitals_df) <- c("hospital", "state")
         rownames(hospitals_df) <- hospitals_df$state
         
-        ## return dataframe
+        ## Return a data frame with the hospital names and the state name
         hospitals_df
 }
-
-
 
