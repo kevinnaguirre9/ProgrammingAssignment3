@@ -28,13 +28,7 @@ rankhospital <- function(state, outcome, num) {
         top_data <-cbind(tidy_data, top = 1:nrow(tidy_data))
         
         ## Setting value of 'num' argument 
-        nrank <- if (tolower(num) == "best") {
-                        1
-                } else if (tolower(num) == "worst") {
-                        nrow(top_data)
-                } else {
-                        num
-                }
+        nrank <- switch(tolower(as.character(num)), "best" = 1, "worst" = nrow(top_data), num)
         
         ## return NULL if top doesn't exists
         if (nrank > nrow(top_data)) return(NA)
